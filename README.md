@@ -1,4 +1,4 @@
-# CLEVR Dataset Generation
+# CLEVR Dataset Generation with Blender v3.0+
 
 This is the code used to generate the [CLEVR dataset](http://cs.stanford.edu/people/jcjohns/clevr/) as described in the paper:
 
