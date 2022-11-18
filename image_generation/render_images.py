@@ -231,8 +231,9 @@ def render_scene(args,
   render_args.resolution_x = args.width
   render_args.resolution_y = args.height
   render_args.resolution_percentage = 100
-  render_args.tile_x = args.render_tile_size
-  render_args.tile_y = args.render_tile_size
+  # render_args.tile_x = args.render_tile_size
+  # render_args.tile_y = args.render_tile_size
+
   if args.use_gpu == 1:
     # Blender changed the API for enabling CUDA at some point
     if bpy.app.version < (2, 78, 0):
@@ -261,7 +262,7 @@ def render_scene(args,
   }
 
   # Put a plane on the ground so we can compute cardinal directions
-  bpy.ops.mesh.primitive_plane_add(radius=5)
+  bpy.ops.mesh.primitive_plane_add(size=5, calc_uvs=False)
   plane = bpy.context.object
 
   def rand(L):
@@ -276,9 +277,9 @@ def render_scene(args,
   # them in the scene structure
   camera = bpy.data.objects['Camera']
   plane_normal = plane.data.vertices[0].normal
-  cam_behind = camera.matrix_world.to_quaternion() * Vector((0, 0, -1))
-  cam_left = camera.matrix_world.to_quaternion() * Vector((-1, 0, 0))
-  cam_up = camera.matrix_world.to_quaternion() * Vector((0, 1, 0))
+  cam_behind = camera.matrix_world.to_quaternion() @ Vector((0, 0, -1))
+  cam_left = camera.matrix_world.to_quaternion() @ Vector((-1, 0, 0))
+  cam_up = camera.matrix_world.to_quaternion() @ Vector((0, 1, 0))
   plane_behind = (cam_behind - cam_behind.project(plane_normal)).normalized()
   plane_left = (cam_left - cam_left.project(plane_normal)).normalized()
   plane_up = cam_up.project(plane_normal).normalized()
@@ -510,18 +511,19 @@ def render_shadeless(blender_objects, path='flat.png'):
   # Cache the render args we are about to clobber
   old_filepath = render_args.filepath
   old_engine = render_args.engine
-  old_use_antialiasing = render_args.use_antialiasing
+  old_use_antialiasing = render_args.simplify_gpencil_antialiasing
 
   # Override some render settings to have flat shading
   render_args.filepath = path
-  render_args.engine = 'BLENDER_RENDER'
-  render_args.use_antialiasing = False
+  render_args.engine = 'BLENDER_WORKBENCH'
+  render_args.simplify_gpencil_antialiasing = False
 
-  # Move the lights and ground to layer 2 so they don't render
-  utils.set_layer(bpy.data.objects['Lamp_Key'], 2)
-  utils.set_layer(bpy.data.objects['Lamp_Fill'], 2)
-  utils.set_layer(bpy.data.objects['Lamp_Back'], 2)
-  utils.set_layer(bpy.data.objects['Ground'], 2)
+  # hid the lights and ground so they don't render
+  bpy.data.objects['Lamp_Key'].hide_render = True
+  bpy.data.objects['Lamp_Fill'].hide_render = True
+  bpy.data.objects['Lamp_Back'].hide_render = True
+  bpy.data.objects['Ground'].hide_render = True
+
 
   # Add random shadeless materials to all objects
   object_colors = set()
@@ -535,8 +537,8 @@ def render_shadeless(blender_objects, path='flat.png'):
       r, g, b = [random.random() for _ in range(3)]
       if (r, g, b) not in object_colors: break
     object_colors.add((r, g, b))
-    mat.diffuse_color = [r, g, b]
-    mat.use_shadeless = True
+    mat.diffuse_color = [r, g, b, 1]
+    mat.shadow_method = 'NONE'
     obj.data.materials[0] = mat
 
   # Render the scene
@@ -547,15 +549,16 @@ def render_shadeless(blender_objects, path='flat.png'):
     obj.data.materials[0] = mat
 
   # Move the lights and ground back to layer 0
-  utils.set_layer(bpy.data.objects['Lamp_Key'], 0)
-  utils.set_layer(bpy.data.objects['Lamp_Fill'], 0)
-  utils.set_layer(bpy.data.objects['Lamp_Back'], 0)
-  utils.set_layer(bpy.data.objects['Ground'], 0)
+
+  bpy.data.objects['Lamp_Key'].hide_render = False
+  bpy.data.objects['Lamp_Fill'].hide_render = False
+  bpy.data.objects['Lamp_Back'].hide_render = False
+  bpy.data.objects['Ground'].hide_render = False
 
   # Set the render settings back to what they were
   render_args.filepath = old_filepath
   render_args.engine = old_engine
-  render_args.use_antialiasing = old_use_antialiasing
+  render_args.simplify_gpencil_antialiasing = old_use_antialiasing
 
   return object_colors
 
