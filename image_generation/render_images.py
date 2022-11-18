@@ -146,11 +146,6 @@ parser.add_argument('--render_min_bounces', default=8, type=int,
     help="The minimum number of bounces to use for rendering.")
 parser.add_argument('--render_max_bounces', default=8, type=int,
     help="The maximum number of bounces to use for rendering.")
-parser.add_argument('--render_tile_size', default=256, type=int,
-    help="The tile size to use for rendering. This should not affect the " +
-         "quality of the rendered image but may affect the speed; CPU-based " +
-         "rendering may achieve better performance using smaller tile sizes " +
-         "while larger tile sizes may be optimal for GPU-based rendering.")
 
 def main(args):
   num_digits = 6
@@ -433,15 +428,15 @@ def add_random_objects(scene_struct, num_objects, args, camera):
       'color': color_name,
     })
 
-  # Check that all objects are at least partially visible in the rendered image
-  all_visible = check_visibility(blender_objects, args.min_pixels_per_object)
-  if not all_visible:
-    # If any of the objects are fully occluded then start over; delete all
-    # objects from the scene and place them all again.
-    print('Some objects are occluded; replacing objects')
-    for obj in blender_objects:
-      utils.delete_object(obj)
-    return add_random_objects(scene_struct, num_objects, args, camera)
+  # # Check that all objects are at least partially visible in the rendered image
+  # all_visible = check_visibility(blender_objects, args.min_pixels_per_object)
+  # if not all_visible:
+  #   # If any of the objects are fully occluded then start over; delete all
+  #   # objects from the scene and place them all again.
+  #   print('Some objects are occluded; replacing objects')
+  #   for obj in blender_objects:
+  #     utils.delete_object(obj)
+  #   return add_random_objects(scene_struct, num_objects, args, camera)
 
   return objects, blender_objects
 
@@ -518,6 +513,7 @@ def render_shadeless(blender_objects, path='flat.png'):
   render_args.engine = 'BLENDER_WORKBENCH'
   render_args.simplify_gpencil_antialiasing = False
 
+
   # hid the lights and ground so they don't render
   bpy.data.objects['Lamp_Key'].hide_render = True
   bpy.data.objects['Lamp_Fill'].hide_render = True
@@ -543,7 +539,6 @@ def render_shadeless(blender_objects, path='flat.png'):
 
   # Render the scene
   bpy.ops.render.render(write_still=True)
-
   # Undo the above; first restore the materials to objects
   for mat, obj in zip(old_materials, blender_objects):
     obj.data.materials[0] = mat
